@@ -2,24 +2,64 @@
 from pymongo import MongoClient
 from pprint import pprint
 import pandas as pd
-
+from colorama import Fore, Back, Style
+import re
+import random
+#esay install >> cd C:\Users\Stagiaire\AppData\Local\Programs\Python\Python311\Scripts >> pip install pandas
 client = MongoClient("mongodb://localhost:27017/")
 db = client["my-first-db"]
+collection=db["books"]
+
+
+#COULEURS------------------------------------------------------------------
+BLACK = Fore.BLACK
+RED = Fore.RED
+GREEN = Fore.GREEN
+YELLOW = Fore.YELLOW
+BLUE = Fore.BLUE
+MAGENTA = Fore.MAGENTA
+CYAN = Fore.CYAN
+WARNING = '\033[93m'
+UNDERLINE = '\033[4m'
+BOLD = '\033[1m'
+HEADER = '\033[95m'
+
+LIGHT_RED = Fore.LIGHTRED_EX
+LIGHT_GREEN = Fore.LIGHTGREEN_EX
+LIGHT_BLUE = Fore.LIGHTBLUE_EX
+LIGHT_MAGENTA = Fore.LIGHTMAGENTA_EX
+LIGHT_CYAN = Fore.LIGHTCYAN_EX
+LIGHT_WHITE = Fore.LIGHTWHITE_EX
+
+# Style (Bold, Dim, Normal, Reset_all)
+BOLD = Style.BRIGHT
+DIM = Style.DIM
+NORMAL = Style.NORMAL
+RESET_ALL = Style.RESET_ALL
 
 #FONCTIONS-------------------------------------------------------------------
 
 def aff_elem(resultats):
     df = pd.DataFrame(list(resultats))
-    selected_columns = ["title", "authors", "year", "type"]
-    df_selected = df[selected_columns]
-    pd.set_option('display.max_colwidth', None)
+    if not df.empty:
+        selected_columns = ["title", "authors", "year", "type"]
+        df_selected = df[selected_columns]
+        pd.set_option('display.max_colwidth', 70)
 
-    print(df_selected)
+        print(df_selected)
+    else:
+        print("Aucun résultat trouvé.")
+
+def aff_tout(resultats):
+    df = pd.DataFrame(list(resultats))
+    pd.set_option('display.max_colwidth', 30)
+    pd.set_option('display.max_columns', None)
+    print(df)
+    pd.set_option('display.max_columns', 8)
 
 def aff_elem_complet(resultats):
     if resultats:
         livre = resultats[0]
-
         for attribut, valeur in livre.items():
             if attribut == '_id':
                 attribut = 'id'
@@ -27,27 +67,80 @@ def aff_elem_complet(resultats):
     else:
         print("Livre non trouvé.")
 
+def aff_stats(resultats):
+    df = pd.DataFrame(list(resultats))
+
+    if not df.empty:
+        print("Tableau des valeurs :")
+        print(df)
+
+    else:
+        print("Aucun résultat trouvé.")
+
+def aff_avg(resultats):
+    df = pd.DataFrame(list(resultats))
+
+    if not df.empty:
+        moyenne = df.at[0, 'moyenne']
+        print(f"Moyenne : {moyenne}")
+    else:
+        print("Aucun résultat trouvé.")
+
+
+def pagination(pipeline_personnalise,nb_fonction,choix_limit_affichage):
+    page_number=1
+    changer_page="1"
+    while changer_page !="0":
+        pipeline_page = pipeline_personnalise.copy()
+        skip_count = (page_number - 1) * choix_limit_affichage
+        count_doc = len(list(collection.aggregate(pipeline_page)))
+
+        print("*------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*")
+        print("Page numéro : ",page_number," ------------------   Nombre résultat :",count_doc)
+        pipeline_page.append({"$skip": skip_count})
+        pipeline_page.append({"$limit": choix_limit_affichage})
+        if nb_fonction=="1": aff_elem(collection.aggregate(pipeline_page))
+        elif nb_fonction=="2": aff_stats(collection.aggregate(pipeline_page))
+        elif nb_fonction=="3": aff_tout(collection.aggregate(pipeline_page))
+        changer_page = input("\n Changer de page ? (0 :pour quitter, 1: pour avancer ➡️, 2: pour reculer ⬅️)   \n")
+        if changer_page=="1":
+            if ((page_number - 1) * choix_limit_affichage)+choix_limit_affichage < count_doc:
+                page_number=page_number+1
+            else:
+                print(WARNING+"⚠️ //////////////////*Error *  --------------  page limit ⚠️"+ RESET_ALL)
+        else :
+            if changer_page=="2":
+                if page_number > 1:
+                    page_number=page_number-1
+                else :
+                    print(WARNING+"⚠️ //////////////////*Error *  --------------  page limit ⚠️"+ RESET_ALL)        
+    
+
+
 #MENU----------------------------------------------------------------------
 i=1
-while i>=1 and i<=6:
+choix_limit_affichage=10
+while i>=1 and i<=7:
 
-    print("Menu :")
-    print("1: Afficher tous les livres")
-    print("2: Afficher les livres par critère")
-    print("3: Ajouter un livre ")
-    print("4: Supprimer un livre ")
-    print("5: Modifier un livre ")
-    print("6: Statistiques ")
-    print("7: Quitter ")
+    print(UNDERLINE +HEADER+"📚     Menu :"+RESET_ALL)
+    print("1: 📖  Afficher tous les livres")
+    print("2: 🤔  Afficher les livres par critère")
+    print("3: ➕  Ajouter un livre ")
+    print("4: 🗑️   Supprimer un livre ")
+    print("5: ✏️   Modifier un livre ")
+    print("6: 📈  Statistiques ")
+    print("7: ⚙️  Options ")
+    print(RED+"8: 🚽  Quitter "+RESET_ALL)
     i = int(input())
 
     if i == 1:
-        None
-        # for item in db["users"].find():
-        #    pprint.pprint(item)
+        pipeline_personnalise=[]
+        pipeline_personnalise.append({"$match":{}})
+        pagination(pipeline_personnalise, "3",choix_limit_affichage)
 
     #RECHERCHE----------------------------------------------------------------------
     if i == 2:
+        print(UNDERLINE+"🔍  RECHERCHE  🔍"+RESET_ALL)
         pipeline_personnalise = []
         t=1
         choix_t=[]
@@ -56,98 +149,83 @@ while i>=1 and i<=6:
         option_de_tri=0
         option_de_filtre=0
 
-        while t != 0 and len(choix_t)!=3 :
-            print("Voulez-vous ajoutez un critère ? 0 pour Quitter")
+        while t != 0 and t != 4:
+            print("Voulez-vous ajoutez un critère ? 0 pour Quitter, 4 pour continuer")
             if 1 not in choix_t:
                 print("1: par auteur")
             if 2 not in choix_t:
                 print("2: par titre")
             if 3 not in choix_t:
-                print("3: par année")
+                print("3: 🗓️ par année")
         
             t = int(input("Choix:"))
             if t not in choix_t:
                 if t == 1:
                     auteurs = input("Auteurs : ")
-                    pipeline_personnalise.append({"$match": {"authors": {"$eq": auteurs}}})
+                    pipeline_personnalise.append({"$match": {"authors":{"$regex": re.compile(re.escape(auteurs), re.IGNORECASE)}}})
                     choix_t.append(t)
                 elif t == 2:
                     titre = input("Titre : ")
-                    pipeline_personnalise.append({"$match": {"title": {"$eq": titre}}})
+                    pipeline_personnalise.append({"$match": {"title":{"$regex": re.compile(re.escape(titre), re.IGNORECASE)}}})
                     choix_t.append(t)
                 elif t == 3:
                     annee = int(input("Année : "))
                     pipeline_personnalise.append({"$match": {"year": {"$eq": annee}}})
                     choix_t.append(t)
+                if len(choix_t) == 3:
+                    t =4
+            elif t ==4:
+                break
             else:
                 print("critère déja choisi") 
-        trie =1
-        while trie >0 and trie <3:
-            trie=int(input("Voulez vous rajouter un trie ? 0  pour rien , 1 pour trie par auteur , 2 par titre ,3 par annee"))
-            if trie >0:
-                typetrie=input("Quelle type de trie croissant/décroissant ? 1 croissant, 2 décroissant")
-                if trie==1: texttrie="authors"
-                if trie==2: texttrie="title"
-                if trie==3: texttrie="year"
-                
-                pipeline_personnalise.append({"$sort": {texttrie: int(typetrie)}})
 
-        page_number=1
-        changer_page="1"
-        while changer_page !="0":
-            skip_count = (page_number - 1) * 10
-            count_doc = len(list(db["books"].aggregate(pipeline_personnalise)))
+        if t!= 0:
+            trie =1
+            while trie >0 and trie <3:
+                trie=int(input("Voulez vous rajouter un trie ? 0  pour rien , 1 pour trie par auteur , 2 par titre ,3 par annee  : "))
+                if trie >0:
+                    typetrie=input("Quelle type de trie croissant/décroissant ? 1 croissant, 2 décroissant  : ")
+                    if trie==1: texttrie="authors"
+                    if trie==2: texttrie="title"
+                    if trie==3: texttrie="year"
+                    
+                    pipeline_personnalise.append({"$sort": {texttrie: int(typetrie)}})
 
-            print("*------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*")
-            print("Page numéro : ",page_number," ------------------   Nombre résultat :",count_doc)
-            pipeline_personnalise.append({"$skip": skip_count})
-            pipeline_personnalise.append({"$limit": 10})
-            aff_elem(db["books"].aggregate(pipeline_personnalise))
-            changer_page = input("\n Changer de page ? (0 :pour quitter,1: pour avancer,2: pour reculer)   ")
-            if changer_page=="1":
-                if ((page_number - 1) * 10)+10 < count_doc:
-                    page_number=page_number+1
-                else:
-                    print("*Error *  --------------  page limit")
-            else :
-                if changer_page=="2":
-                    if page_number > 1:
-                        page_number=page_number-1
-                    else :
-                        print("*Error *  --------------  page limit")                
+            pagination(pipeline_personnalise,"1",choix_limit_affichage)       
 
     #AJOUT----------------------------------------------------------------------
     if i == 3:
-        print("Ajout de livre")
+        print(UNDERLINE+"Ajout de livre"+RESET_ALL)
+
         titre=input("titre:")
         type=input("type:")
         annee=input("annee:")
+        id= titre+""+type+annee+str(random.randint(100, 2000))
         auteur=[]
         aut =0
         while aut ==0:
             nom_auteur=input("Nom de l'auteur:")
             auteur.append(nom_auteur)
-            aut=int(input("Voulez-vous ajouter un autre auteur 0 oui/ 1 non?"))
+            aut=int(input("Voulez-vous ajouter un autre auteur 0 oui/ 1 non ? "))
 
-        db["books"].insert_one({"title":titre,"type":type,"year":int(annee),"authors":auteur})
-
+        collection.insert_one({"_id":id,"title":titre,"type":type,"year":int(annee),"authors":auteur})
 
     #SUPPRESSION----------------------------------------------------------------------
     if i == 4: 
         l=1
         while l >=1 and l <=2:
-            print("Sélection de mode de Suppression :")
+            print(UNDERLINE+LIGHT_RED+"Sélection de mode de Suppression :"+RESET_ALL)
             print("1: Suppression unique/simple par id")
             print("2: Suppression multiple/complexe")
             print("0: Quitter")
             l=int(input("Choix du mode de suppression:"))
             if l == 1:
                 id=input("Id du livre:")
-                db["books"].delete_one({"_id":{"$eq":id}})
+                collection.delete_one({"_id":{"$eq":id}})
             if l == 2:
                 s=0
                 while s >=1 and s <=3:
-                    print("Sélection de mode de Suppression complexe :")
+                    print(UNDERLINE+LIGHT_RED+"Sélection de mode de Suppression complexe :"+RESET_ALL)
                     print("1: Suppression des livres par auteur")
                     print("2: Suppression des livres par type")
                     print("3: Suppression des livres par année")
@@ -155,17 +233,19 @@ while i>=1 and i<=6:
                     s=int(input("Choix du mode de suppression complexe:"))
                     if s == 1:
                         nom_auteur=input("Nom de l'auteur:")
-                        db["books"].delete_many({"authors":{"$eq":nom_auteur}})
+                        collection.delete_many({"authors":{"$eq":nom_auteur}})
                     if s == 2:
                         type=input("Type de livre:")
-                        db["books"].delete_many({"authors":{"$eq":type}})
+                        collection.delete_many({"type":{"$eq":type}})
                     if s == 3:
                         annee=int(input("Annee:"))
-                        db["books"].delete_many({"year":{"$eq":nom_auteur}})
+                        collection.delete_many({"year":{"$eq":nom_auteur}})
+
     #MODIFICATION-----------------------------------------------------------------------------------------
     if i == 5:
-        livre_id_recherche = input("Entrez l'ID du livre à rechercher : ")
-        livre_recherche=db["books"].find({"_id": livre_id_recherche}) 
+        print(UNDERLINE+"MODIFCATION"+RESET_ALL)
+        livre_id_recherche = input(LIGHT_CYAN+"Entrez l'ID du livre à rechercher : "+RESET_ALL)
+        livre_recherche=collection.find({"_id": livre_id_recherche}) 
         nouveaux_attributs = {}
         if livre_recherche:
             print("Livre trouvé : \n")
@@ -190,41 +270,57 @@ while i>=1 and i<=6:
                 nouveaux_attributs["type"] = int(new_type)
 
             if nouveaux_attributs:
-                db["books"].update_one({"_id": livre_id_recherche}, {"$set": nouveaux_attributs})
+                collection.update_one({"_id": livre_id_recherche}, {"$set": nouveaux_attributs})
                 print("Livre mis à jour avec succès.")
             else:
                 print("Aucune modification n'a été effectuée.")
         else:
             print("Aucun livre trouvé avec cet ID.")
+
     #STATS-----------------------------------------------------------------------------------------
     if i == 6:
-        None
-    #     nom=input("Nom user rechercher:")
-    #     nomremp=input("Nom user à remplacer:")
-    #     age=input("Age:")
-    #     email=input("Email:")
-        # if nomremp !="":
-        # if age!="":
-        # if email!="":
-        # db["users"].update_one({"name":nom},{"name":nomremp,"age":int(age),"email":email})
+        print(UNDERLINE+"STATISTIQUES"+RESET_ALL)
+        pipeline_personnalise = []
+        t=0
+        tf=1
+        base_aggregate=[]
+        option_de_tri=0
+        option_de_filtre=0
 
+        while t < 1 or t > 3  :
+            print(LIGHT_GREEN+"Voulez-vous ajoutez un critère moy/total par auteur/titre/année ? 0 pour Quitter "+RESET_ALL)
+            print("1: par auteur")
+            print("2: par type")
+            print("3: par année")
+            t = int(input("Choix:"))
+            if t == 1:
+                texttrie="authors"
+            elif t == 2:
+                texttrie="type"
+            elif t == 3:
+                texttrie="year"
 
+            pipeline_personnalise.append({"$unwind": f"${texttrie}"})
+            pipeline_personnalise.append({"$group": {"_id": f"${texttrie}","total": {"$sum": 1}}})
+            pipeline_avg =pipeline_personnalise.copy()
+            pipeline_avg.append({"$group": {"_id": None, "moyenne": {"$avg": "$total"}}})
 
-# me=db["users"].aggregate([{"$match": {"email":"je@email.com"}}])
-# #print(db["users"].find()[0])  
-# print(me)
-        
-# _id:"series/cogtech/Zancanaro12"
-# type:"Article"
-# title:"Shared Interfaces for Co-located Interaction."
-# pages:Object
-#     start:71
-#     end:88
-# year:2012
-# booktitle:"Ubiquitous Display Environments"
-# url:"db/series/cogtech/364227662.html#Zancanaro12"
+        trie =0
+        while trie <1 or trie >2:
+            trie=int(input(LIGHT_GREEN+"Voulez vous rajouter un trie ?  1 pour trie par critère auteur/titre/année , 2 par valeur "+RESET_ALL+"\n"))
+            if trie >0:
+                typetrie=input("Quelle type de trie croissant/décroissant ?  1 croissant, 2 décroissant \n")
+                if int(typetrie) ==2:typetrie=-1
+                if trie ==1:
+                    choixtrie="_id"
+                elif trie ==2:
+                    choixtrie="total"
+                pipeline_personnalise.append({"$sort": {choixtrie: int(typetrie)}})
 
-# authors:Array (1):0:"Massimo Zancanaro"
-                        # series/cogtech/Zancanaro12
-                        # series/cogtech/Wahlster13
-        
+        aff_avg(collection.aggregate(pipeline_avg))
+
+        pagination(pipeline_personnalise,"2",choix_limit_affichage)
+
+    #OPTIONS-----------------------------------------------------------------------------------------
+    if i == 7:
+            choix_limit_affichage = input("Nouvelle limite d'élément par page : ")
