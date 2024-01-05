@@ -58,11 +58,11 @@ def aff_tout(resultats):
 
 def aff_elem_complet(resultats):
     if resultats:
-        livre = resultats[0] 
-        for attribut, valeur in livre.items():
-            if attribut == '_id':
-                attribut = 'id'
-            print(f"{attribut}: {valeur}")
+        for livre in resultats:
+            for attribut, valeur in livre.items():
+                if attribut == '_id':
+                    attribut = 'id'
+                print(f"{attribut}: {valeur}")
     else:
         print("Livre non trouvé.")
 
