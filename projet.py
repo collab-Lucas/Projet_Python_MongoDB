@@ -5,7 +5,7 @@ import pandas as pd
 from colorama import Fore, Back, Style
 import re
 import random
-#esay install >> cd C:\Users\Stagiaire\AppData\Local\Programs\Python\Python311\Scripts >> pip install pandas
+#easy install >> cd C:\Users\Stagiaire\AppData\Local\Programs\Python\Python311\Scripts >> pip install pandas
 client = MongoClient("mongodb://localhost:27017/")
 db = client["my-first-db"]
 collection=db["books"]
@@ -129,7 +129,7 @@ while i>=1 and i<=7:
     print("4: 🗑️   Supprimer un livre ")
     print("5: ✏️   Modifier un livre ")
     print("6: 📈  Statistiques ")
-    print("7: ⚙️  Options ")
+    print("7: ⚙️   Options ")
     print(RED+"8: 🚽  Quitter "+RESET_ALL)
     i = int(input())
 
@@ -169,8 +169,32 @@ while i>=1 and i<=7:
                     pipeline_personnalise.append({"$match": {"title":{"$regex": re.compile(re.escape(titre), re.IGNORECASE)}}})
                     choix_t.append(t)
                 elif t == 3:
-                    annee = int(input("Année : "))
-                    pipeline_personnalise.append({"$match": {"year": {"$eq": annee}}})
+                    choix_op=0
+                    while choix_op not in [1,2,3,4]:
+                        print("Choix d'opération :")
+                        print("1 : Si Année = sélection")
+                        print("2 : Si Année < sélection")
+                        print("3 : Si Année > sélection")
+                        print("4 : Si Année entre sélection 1 et sélection 2")
+                        choix_op=int(input("choix d'opération : "))
+                        if choix_op == 1:
+                            op="$eq"
+                        elif choix_op == 2:
+                            op="$lt"
+                        elif choix_op == 3:
+                            op="$gt"
+                        elif choix_op == 4:
+                            annee1 = int(input("Année infèrieure : "))
+                            annee2 = int(input("Année supèrieur : "))
+                            pipeline_personnalise.append({"$match": {"year": {"$gte": annee1}}})
+                            pipeline_personnalise.append({"$match": {"year": {"$lte": annee2}}})
+                        else:
+                            print("Choix invalide")
+
+                        if choix_op !=4:
+                            annee = int(input("Année : "))
+                            pipeline_personnalise.append({"$match": {"year": {op: annee}}})
+
                     choix_t.append(t)
                 if len(choix_t) == 3:
                     t =4
@@ -200,7 +224,7 @@ while i>=1 and i<=7:
         titre=input("titre:")
         type=input("type:")
         annee=input("annee:")
-        id= titre+""+type+annee+str(random.randint(100, 2000))
+        id= titre+""+type+annee+str(random.randint(100, 2000))+"_"+str(random.randint(100, 2000))
         auteur=[]
         aut =0
         while aut ==0:
@@ -323,4 +347,6 @@ while i>=1 and i<=7:
 
     #OPTIONS-----------------------------------------------------------------------------------------
     if i == 7:
+        choix_limit_affichage=0
+        while choix_limit_affichage <=0:
             choix_limit_affichage = input("Nouvelle limite d'élément par page : ")
