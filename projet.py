@@ -39,10 +39,9 @@ RESET_ALL = Style.RESET_ALL
 
 #FONCTIONS-------------------------------------------------------------------
 
-def aff_elem(resultats):
+def aff_elem(resultats,selected_columns):
     df = pd.DataFrame(list(resultats))
     if not df.empty:
-        selected_columns = ["title", "authors", "year", "type"]
         df_selected = df[selected_columns]
         pd.set_option('display.max_colwidth', 70)
 
@@ -59,7 +58,7 @@ def aff_tout(resultats):
 
 def aff_elem_complet(resultats):
     if resultats:
-        livre = resultats[0]
+        livre = resultats[0] 
         for attribut, valeur in livre.items():
             if attribut == '_id':
                 attribut = 'id'
@@ -87,7 +86,7 @@ def aff_avg(resultats):
         print("Aucun résultat trouvé.")
 
 
-def pagination(pipeline_personnalise,nb_fonction,choix_limit_affichage):
+def pagination(pipeline_personnalise,nb_fonction,choix_limit_affichage,selected_columns):
     page_number=1
     changer_page="1"
     while changer_page !="0":
@@ -99,7 +98,7 @@ def pagination(pipeline_personnalise,nb_fonction,choix_limit_affichage):
         print("Page numéro : ",page_number," ------------------   Nombre résultat :",count_doc)
         pipeline_page.append({"$skip": skip_count})
         pipeline_page.append({"$limit": choix_limit_affichage})
-        if nb_fonction=="1": aff_elem(collection.aggregate(pipeline_page))
+        if nb_fonction=="1": aff_elem(collection.aggregate(pipeline_page),selected_columns)
         elif nb_fonction=="2": aff_stats(collection.aggregate(pipeline_page))
         elif nb_fonction=="3": aff_tout(collection.aggregate(pipeline_page))
         changer_page = input("\n Changer de page ? (0 :pour quitter, 1: pour avancer ➡️, 2: pour reculer ⬅️)   \n")
@@ -120,6 +119,7 @@ def pagination(pipeline_personnalise,nb_fonction,choix_limit_affichage):
 #MENU----------------------------------------------------------------------
 i=1
 choix_limit_affichage=10
+selected_columns = ["title", "authors", "year", "type"]
 while i>=1 and i<=7:
 
     print(UNDERLINE +HEADER+"📚     Menu :"+RESET_ALL)
@@ -136,7 +136,7 @@ while i>=1 and i<=7:
     if i == 1:
         pipeline_personnalise=[]
         pipeline_personnalise.append({"$match":{}})
-        pagination(pipeline_personnalise, "3",choix_limit_affichage)
+        pagination(pipeline_personnalise, "3",choix_limit_affichage,selected_columns)
 
     #RECHERCHE----------------------------------------------------------------------
     if i == 2:
@@ -215,7 +215,7 @@ while i>=1 and i<=7:
                     
                     pipeline_personnalise.append({"$sort": {texttrie: int(typetrie)}})
 
-            pagination(pipeline_personnalise,"1",choix_limit_affichage)       
+            pagination(pipeline_personnalise,"1",choix_limit_affichage,selected_columns)       
 
     #AJOUT----------------------------------------------------------------------
     if i == 3:
@@ -343,10 +343,51 @@ while i>=1 and i<=7:
 
         aff_avg(collection.aggregate(pipeline_avg))
 
-        pagination(pipeline_personnalise,"2",choix_limit_affichage)
+        pagination(pipeline_personnalise,"2",choix_limit_affichage,selected_columns)
 
     #OPTIONS-----------------------------------------------------------------------------------------
     if i == 7:
-        choix_limit_affichage=0
-        while choix_limit_affichage <=0:
-            choix_limit_affichage = input("Nouvelle limite d'élément par page : ")
+        t=1
+        while t !=0  :
+            print(LIGHT_GREEN+"OPTIONS "+RESET_ALL)
+            print("1: limite par page")
+            print("2: élément du tableau/colonne")
+            t = int(input("Choix : "))
+
+            if t ==1:
+                choix_limit_affichage=0
+                while choix_limit_affichage <=0:
+                    choix_limit_affichage = input("Nouvelle limite d'élément par page : ")
+            elif t ==2:
+                selected_columns = ["title", "authors", "year", "type"]
+                nv_tab=[]
+                choix_opt=1
+                while choix_opt !=0  :
+                    print("Sélectionner les éléments à afficher lors des résultats , ils s'afficheront en colonne dans l'ordre choisi. 0 : Quitter")
+                    print("1: id")
+                    print("2: type")
+                    print("3: year")
+                    print("4: titre")
+                    print("5: authors")
+                    print("6: page")
+                    print("7: publieur")
+                    print("8: url")
+                    choix_opt = int(input("Element : "))
+                    if choix_opt == 1:
+                        nv_tab.append("_id")
+                    elif choix_opt == 2:
+                        nv_tab.append("type")
+                    elif choix_opt == 3:
+                        nv_tab.append("year")
+                    elif choix_opt == 4:
+                        nv_tab.append("title")
+                    elif choix_opt == 5:
+                        nv_tab.append("authors")
+                    elif choix_opt == 6:
+                        nv_tab.append("pages")
+                    elif choix_opt == 7:
+                        nv_tab.append("booktitle")
+                    elif choix_opt == 8:
+                        nv_tab.append("url")
+                    selected_columns=nv_tab.copy()
+
